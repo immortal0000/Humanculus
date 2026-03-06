@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Badge from "@/components/ui/Badge";
+import { pressReleaseApi } from "@/lib/api";
 import {
   FileText,
   Sparkles,
@@ -21,6 +22,7 @@ import {
   Smartphone,
   Monitor,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 type ReleaseFormat = "traditional" | "multimedia" | "social";
@@ -62,6 +64,8 @@ export default function PressReleasePage() {
   const [showEditor, setShowEditor] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [, setAiContent] = useState<string | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<ReleaseFormat>("traditional");
   const [form, setForm] = useState({
     headline: "",
@@ -72,12 +76,28 @@ export default function PressReleasePage() {
     brandVoice: "professional",
   });
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
-      setGenerated(true);
-    }, 2500);
+    setApiError(null);
+
+    if (form.headline && form.announcement) {
+      try {
+        const result = await pressReleaseApi.generate({
+          headline: form.headline,
+          subheadline: form.subheadline || undefined,
+          announcement: form.announcement,
+          quotes: form.quotes || undefined,
+          boilerplate: form.boilerplate || undefined,
+          brand_voice: form.brandVoice,
+          format: selectedFormat,
+        });
+        setAiContent(result.data);
+      } catch {
+        setApiError("Backend unavailable — showing sample preview. Start the backend to use AI generation.");
+      }
+    }
+    setIsGenerating(false);
+    setGenerated(true);
   };
 
   if (!showEditor) {
@@ -139,6 +159,13 @@ export default function PressReleasePage() {
           <p className="section-subtitle">AI will draft your release. You review and refine.</p>
         </div>
       </div>
+
+      {apiError && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+          <AlertCircle size={16} className="flex-shrink-0" />
+          {apiError}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Input Panel */}

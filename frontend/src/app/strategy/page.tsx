@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Badge from "@/components/ui/Badge";
+import { strategyApi } from "@/lib/api";
 import {
   Lightbulb,
   Sparkles,
@@ -20,6 +21,7 @@ import {
   Download,
   Copy,
   RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 
 const steps = [
@@ -60,6 +62,8 @@ export default function StrategyPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [, setAiResult] = useState<string | null>(null);
   const [brief, setBrief] = useState({
     companyName: "",
     objective: "",
@@ -69,12 +73,33 @@ export default function StrategyPage() {
     constraints: "",
   });
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
+    setApiError(null);
+
+    // On step 1, call the real API
+    if (currentStep === 1 && brief.companyName && brief.objective && brief.context) {
+      try {
+        const result = await strategyApi.generate({
+          company_name: brief.companyName,
+          objective: brief.objective,
+          context: brief.context,
+          timeline: brief.timeline || undefined,
+          budget: brief.budget || undefined,
+          constraints: brief.constraints || undefined,
+        });
+        setAiResult(result.data);
+        setCurrentStep(2);
+      } catch {
+        // Fallback to mock flow if backend is unavailable
+        setApiError("Backend unavailable — showing sample data. Start the backend to use AI generation.");
+        setCurrentStep(2);
+      }
+    } else {
+      // For other steps, advance with sample data
       setCurrentStep(currentStep + 1);
-    }, 2000);
+    }
+    setIsGenerating(false);
   };
 
   if (!showBuilder) {
@@ -166,6 +191,14 @@ export default function StrategyPage() {
           </div>
         ))}
       </div>
+
+      {/* API Status Banner */}
+      {apiError && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+          <AlertCircle size={16} className="flex-shrink-0" />
+          {apiError}
+        </div>
+      )}
 
       {/* Step Content */}
       {currentStep === 1 && (

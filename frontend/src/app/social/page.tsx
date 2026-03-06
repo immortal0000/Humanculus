@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Badge from "@/components/ui/Badge";
+import { socialApi } from "@/lib/api";
 import {
   Share2,
   Sparkles,
@@ -69,6 +70,8 @@ export default function SocialPage() {
   const [selectedContentType, setSelectedContentType] = useState<ContentType>("text");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [, setApiError] = useState<string | null>(null);
+  const [, setAiPosts] = useState<string | null>(null);
   const [topic, setTopic] = useState("");
   const [context, setContext] = useState("");
 
@@ -78,12 +81,26 @@ export default function SocialPage() {
     );
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
-      setGenerated(true);
-    }, 2000);
+    setApiError(null);
+
+    if (topic && selectedPlatforms.length > 0) {
+      try {
+        const result = await socialApi.generate({
+          topic,
+          context: context || undefined,
+          platforms: selectedPlatforms,
+          content_type: selectedContentType,
+          brand_voice: "professional",
+        });
+        setAiPosts(result.data);
+      } catch {
+        setApiError("Backend unavailable — showing sample posts. Start the backend to use AI generation.");
+      }
+    }
+    setIsGenerating(false);
+    setGenerated(true);
   };
 
   const statusBadge: Record<string, "success" | "info" | "default"> = {
